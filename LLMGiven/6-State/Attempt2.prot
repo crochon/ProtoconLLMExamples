@@ -1,0 +1,47 @@
+constant N := 3;  // Number of nodes
+constant M := 3;  // Number of states for puppet variable x
+
+direct variable t[Nat % N] <- Nat % 2;  // Binary token variable for each node
+puppet variable x[Nat % N] <- Nat % M;  // Puppet variable for each node
+
+// Future & Shadow condition
+(future & shadow)
+  (unique i <- Nat % N :
+   i == 0 && t[(i-1) % N] == t[i]
+   ||
+   i != 0 && t[(i-1) % N] != t[i]
+  );
+
+// Process Bot (operates on node 0)
+process Bot[i <- Nat % 1]
+{
+  read: t[(i-1) % N], x[(i-1) % N];
+  write: t[i], x[i];
+  shadow action: ( t[(i-1) % N] == t[i] --> t[i] := 1 - t[(i-1) % N]; );
+}
+
+// Process P (operates on nodes 1 and 2)
+process P[j <- Nat % (N-1)]
+{
+  let i := j + 1;  // i = 1, 2
+  read: t[(i-1) % N], x[(i-1) % N];
+  write: t[i], x[i];
+  shadow action: ( t[(i-1) % N] != t[i] --> t[i] := t[(i-1) % N]; );
+}
+
+// Initial state definition
+forall i <- Nat % N :
+  t[i] := 0;  // Initialize token variable to 0
+  x[i] := 0;  // Initialize puppet variable to 0
+
+// System behavior
+system:
+  // Bot process runs first
+  Bot[0];
+
+  // P processes run next
+  forall j <- Nat % (N-1) :
+    P[j];
+
+  // Ensure Future & Shadow condition holds
+  assert (future & shadow);

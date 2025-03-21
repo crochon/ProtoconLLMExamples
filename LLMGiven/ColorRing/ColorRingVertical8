@@ -1,0 +1,29 @@
+constant N := 11;
+constant M := 10;
+
+variable x[Int % N] <- Int % M;
+
+// Eventually one token will exist and the protocol will remain live.
+(future & active shadow)
+  (unique i <- Int % N :
+   (i == 0 && x[(i-1+N) % N] == x[i])
+   ||
+   (i != 0 && x[(i-1+N) % N] != x[i])
+  );
+
+process Bot[i <- Int % 1]
+{
+  read:  x[(i-1+N) % N];
+  write: x[i];
+
+  direct action: ( x[(i-1+N) % N] == x[i] --> x[i] := (x[(i-1+N) % N] + 1) % M; );
+}
+
+process P[j <- Int % (N-1)]
+{
+  let i := j+1;
+  read:  x[(i-1+N) % N];
+  write: x[i];
+
+  direct action: ( x[(i-1+N) % N] != x[i] --> x[i] := x[(i-1+N) % N]; );
+}

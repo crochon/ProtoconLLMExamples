@@ -1,0 +1,68 @@
+// L = number of levels in the tree.
+// By default, use a tree tall enough to contain all three types of processes.
+constant L := 3;
+
+// Variables for each node in the tree.
+variable x[Int % (2^L-1)] <- Int % 3;
+
+// Root process (level 0).
+process Root[i <- Int % 1]
+{
+  // Read children's values.
+  read:  x[1];
+  read:  x[2];
+
+  // Write its own value.
+  write: x[0];
+
+  // Ensure the root's value is different from its children's values.
+  (future & silent)
+    (x[0] != x[1] && x[0] != x[2])
+    ;
+}
+
+// Internal processes (levels 1 to L-2).
+process P[j <- Int % (2^(L-1)-2)]
+{
+  // Calculate the index of the current node.
+  let i := j + 1;
+
+  // Calculate the indices of the parent and children.
+  let parent_idx := (i-1)/2;
+  let left_idx := 2*i + 1;
+  let right_idx := 2*i + 2;
+
+  // Read parent's and children's values.
+  read:  x[parent_idx];
+  read:  x[left_idx];
+  read:  x[right_idx];
+
+  // Write its own value.
+  write: x[i];
+
+  // Puppet action: Ensure the current node's value is different from its parent's value.
+  puppet action:
+    ( x[i] == x[parent_idx] --> x[i] := (x[i] + 1) % 3; )
+    ;
+}
+
+// Leaf processes (level L-1).
+process Leaf[j <- Int % (2^(L-1))]
+{
+  // Calculate the index of the current leaf node.
+  let i := j + (2^(L-1) - 1);
+
+  // Calculate the index of the parent.
+  let parent_idx := (i-1)/2;
+
+  // Read parent's value.
+  read:  x[parent_idx];
+
+  // Write its own value.
+  write: x[i];
+
+  // Puppet action: Ensure the leaf's value is different from its parent's value.
+  puppet action:
+    ( x[i] == x[parent_idx] --> x[i] := (x[i] + 1) % 3; )
+    ;
+}

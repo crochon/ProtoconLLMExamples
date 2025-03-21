@@ -1,0 +1,31 @@
+constant N := 5;  // Number of processes
+constant M := N;  // Modulus for the values of x[i]
+
+variable x[Nat % N] <- Nat % M;  // Array of variables, each initialized to a value in [0, M-1]
+
+// Process Bot (for i = 0)
+process Bot[i <- Nat % 1]  // Only one instance for i = 0
+{
+  read:  x[(i-1 + N) % N];  // Read x[N-1] due to circular nature
+  write: x[i];              // Write x[0]
+
+  // Direct action for Bot
+  action: (x[(i-1 + N) % N] == x[i] --> x[i] := (x[i] + 1) % M; );
+}
+
+// Processes P (for i = 1 to N-1)
+process P[j <- Nat % (N-1)]  // Instances for j = 0 to N-2, representing i = 1 to N-1
+{
+  let i := j + 1;  // Map j to i = 1 to N-1
+  read:  x[i-1];   // Read x[i-1]
+  write: x[i];     // Write x[i]
+
+  // Direct action for P
+  action: (x[i-1] != (x[i] + 1) % M && x[i-1] == x[i] --> x[i] := (x[i-1] + 1) % M; );
+}
+
+// Global condition for stabilization
+(future & active shadow)
+  (forall i <- Int % N :
+    x[(i-1 + N) % N] == (x[i] + 1) % M
+  );
