@@ -32,11 +32,3 @@ process P[j <- Nat % (N-1)]
   shadow action:  // Fixed: Added semicolon here
     ( t[i-1] != t[i] --> t[i] := t[i-1]; x[i] := (x[i-1] + 1) % M; );
 }
-
-// Active shadow ensures liveness
-(future & active shadow)
-  (unique i <- Nat % N :
-   i == 0 && t[i-1] == t[i] && x[i-1] == x[i]
-   ||
-   i != 0 && t[i-1] != t[i] && x[i-1] != x[i]
-  )

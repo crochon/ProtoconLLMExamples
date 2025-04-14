@@ -1,0 +1,40 @@
+constant N := 5;
+constant M := 3;
+
+direct variable t[Nat % N] <- Nat % 2;
+puppet variable x[Nat % N] <- Nat % M;
+
+// Legitimate states have exactly one token holder
+(future & shadow)
+  (unique i <- Nat % N :
+   (i == 0 && t[i-1] == t[i])  // Bot holds token
+   || 
+   (i != 0 && t[i-1] != t[i])  // P[i] holds token
+  );
+
+// Process Bot (node 0)
+process Bot[i <- Nat % 1]
+{
+  read: t[i-1], x[i-1], x[i];
+  write: t[i], x[i];
+
+  action:
+    (t[i-1] == t[i] && x[i] != x[i-1] -->
+      t[i] := 1 - t[i];
+      x[i] := (x[i-1] + 1) % M;
+    );
+}
+
+// Process P (nodes 1..4)
+process P[j <- Nat % (N-1)]
+{
+  let i := j+1;
+  read: t[i-1], x[i-1], x[i];
+  write: t[i], x[i];
+
+  action:
+    (t[i-1] != t[i] && x[i] != x[i-1] -->
+      t[i] := t[i-1];
+      x[i] := (x[i-1] + 1) % M;
+    );
+}

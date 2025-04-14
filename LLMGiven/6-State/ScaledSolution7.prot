@@ -1,0 +1,59 @@
+constant N := 5;
+constant M := 3;
+
+direct variable t[Nat % N] <- Nat % 2;
+puppet variable x[Nat % N] <- Nat % M;
+
+// Legitimate states have exactly one token holder
+(future & shadow)
+  (unique i <- Nat % N :
+   i == 0 && t[i-1] == t[i] && x[i-1] == x[i]  // Bot holds token
+   || 
+   i != 0 && t[i-1] != t[i] && x[i-1] != x[i]  // P[i] holds token
+  );
+
+// Process Bot (node 0)
+process Bot[i <- Nat % 1]
+{
+  read: t[i-1], x[i-1];
+  write: t[i], x[i];
+  
+  shadow action:
+    ( t[i-1] == t[i] && x[i-1] == x[i] --> 
+      t[i] := 1 - t[i-1]; 
+      x[i] := (x[i-1] + 1) % M;
+    );
+    
+  // Recovery action for deadlock states
+  shadow action:
+    ( t[i-1] == t[i] && x[i-1] != x[i] -->
+      x[i] := x[i-1];  // Align puppet variables
+    );
+}
+
+// Process P (nodes 1..4)
+process P[j <- Nat % (N-1)]
+{
+  let i := j+1;
+  read: t[i-1], x[i-1];
+  write: t[i], x[i];
+  
+  shadow action:
+    ( t[i-1] != t[i] && x[i-1] != x[i] --> 
+      t[i] := t[i-1]; 
+      x[i] := (x[i-1] + 1) % M;
+    );
+    
+  // Recovery action for deadlock states
+  shadow action:
+    ( t[i-1] != t[i] && x[i-1] == x[i] -->
+      x[i] := (x[i-1] + 1) % M;  // Break symmetry
+    );
+}
+
+// Ensure at least one process is always enabled
+(future & active shadow)
+  (exists i <- Nat % N :
+   (i == 0 && (t[i-1] == t[i] || x[i-1] == x[i])) ||
+   (i != 0 && (t[i-1] != t[i] || x[i-1] != x[i]))
+  );
