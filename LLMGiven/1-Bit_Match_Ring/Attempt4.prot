@@ -1,0 +1,26 @@
+constant N := 3;
+constant M := 2;
+
+shadow variable e[Nat % N] <- Nat % 2;
+shadow variable x[Nat % N] <- Nat % M;
+
+((future & silent) % puppet)
+  (forall i <- Nat % N :
+    !(e[i] == 1 && e[i+1] == 1) &&
+    (e[i-1] == 1 || e[i] == 1 || e[i+1] == 1)
+  );
+
+process P[i <- Nat % N]
+{
+  read: x[i-1];
+  read: x[i+1];
+  write: e[i];
+  write: x[i];
+  write: e[i+1];
+
+  action:
+    (x[i] == 1 && x[i-1] == 0 && x[i+1] == 0 --> e[i] := 1;)
+    (!(x[i] == 1 && x[i-1] == 0 && x[i+1] == 0) --> e[i] := 0;)
+    (x[i] == 0 --> x[i] := 1;)
+    (x[i] == 1 --> x[i] := 0;);
+}
